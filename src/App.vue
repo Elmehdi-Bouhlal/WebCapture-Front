@@ -1,7 +1,14 @@
 <script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
+import SiteFooter from "@/components/site/SiteFooter.vue"
+import SiteNavbar from "@/components/site/SiteNavbar.vue"
 </script>
 
 <template>
-  <HelloWorld />
+  <div class="flex min-h-screen flex-col">
+    <SiteNavbar />
+    <main class="flex-1">
+      <RouterView />
+    </main>
+    <SiteFooter />
+  </div>
 </template>
