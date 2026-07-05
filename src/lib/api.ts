@@ -61,7 +61,7 @@ export class ApiError extends Error {
   }
 }
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "/api/v1"
+const API_BASE = import.meta.env.VITE_API_BASE ?? "https://webcapture-api.elmehdi.space/api/v1"
 
 /** True whenever a request had to fall back to the local demo simulation. */
 export const demoMode = ref(false)
