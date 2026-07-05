@@ -1,8 +1,16 @@
 <script setup lang="ts">
-import { computed, ref, watch } from "vue"
-import JSZip from "jszip"
-import { CircleX, Download, HardDriveDownload, LoaderCircle, X } from "@lucide/vue"
+import { computed, watch } from "vue"
+import {
+  ArrowUpRight,
+  CircleX,
+  Download,
+  ExternalLink,
+  HardDriveDownload,
+  LoaderCircle,
+  X,
+} from "@lucide/vue"
 import { Button } from "@/components/ui/button"
+import { useImageActions } from "@/composables/useImageActions"
 import { type CaptureRequest, capturePreview, hostOf } from "@/lib/api"
 import { formatBytes } from "@/lib/format"
 
@@ -13,6 +21,17 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
 }>()
+
+const {
+  downloading,
+  downloadingAll,
+  zipProgress,
+  downloadError,
+  downloadOne,
+  downloadAll,
+  openImage,
+  resetDownloads,
+} = useImageActions()
 
 /** All stored section screenshots; falls back to the placeholder preview. */
 const images = computed(() => {
@@ -28,131 +47,7 @@ const images = computed(() => {
 
 const host = computed(() => (props.capture ? hostOf(props.capture.url) : ""))
 
-// ---------------------------------------------------------------------------
-// Downloads
-// ---------------------------------------------------------------------------
-
-const downloading = ref<Set<number>>(new Set())
-const downloadingAll = ref(false)
-const zipProgress = ref(0)
-const downloadError = ref("")
-
-watch(() => props.capture, () => {
-  downloading.value = new Set()
-  downloadingAll.value = false
-  downloadError.value = ""
-})
-
-/**
- * Same-origin fallback for the screenshot CDN: the bucket sends no CORS
- * headers, so direct fetch() is blocked — /cdn is proxied to it by Vite
- * (mirror the rule in production, or enable CORS on the bucket).
- */
-function proxied(src: string): string {
-  try {
-    const url = new URL(src, window.location.origin)
-    if (url.origin === window.location.origin || url.protocol === "data:") return src
-    return `/cdn${url.pathname}${url.search}`
-  }
-  catch {
-    return src
-  }
-}
-
-async function fetchBlob(src: string): Promise<Blob> {
-  const attempts = src.startsWith("data:") ? [src] : [src, proxied(src)]
-  let lastError: unknown
-  for (const attempt of attempts) {
-    try {
-      const res = await fetch(attempt)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      return await res.blob()
-    }
-    catch (error) {
-      lastError = error
-    }
-  }
-  throw lastError
-}
-
-function extensionOf(blob: Blob): string {
-  if (blob.type.includes("svg")) return "svg"
-  if (blob.type.includes("jpeg")) return "jpg"
-  if (blob.type.includes("webp")) return "webp"
-  return "png"
-}
-
-function saveBlob(blob: Blob, filename: string) {
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement("a")
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  link.remove()
-  setTimeout(() => URL.revokeObjectURL(url), 1000)
-}
-
-async function downloadOne(index: number) {
-  const image = images.value[index]
-  if (!image || downloading.value.has(index)) return
-  downloadError.value = ""
-  downloading.value = new Set(downloading.value).add(index)
-  try {
-    const blob = await fetchBlob(image.src)
-    saveBlob(blob, `${host.value}-section-${String(index + 1).padStart(2, "0")}.${extensionOf(blob)}`)
-  }
-  catch {
-    downloadError.value = "Couldn't download this image — please try again."
-  }
-  finally {
-    const next = new Set(downloading.value)
-    next.delete(index)
-    downloading.value = next
-  }
-}
-
-async function downloadAll() {
-  if (downloadingAll.value || !images.value.length) return
-  downloadError.value = ""
-
-  // A single image doesn't need a zip.
-  if (images.value.length === 1) {
-    await downloadOne(0)
-    return
-  }
-
-  downloadingAll.value = true
-  zipProgress.value = 0
-  try {
-    const zip = new JSZip()
-    let failed = 0
-    for (const [index, image] of images.value.entries()) {
-      try {
-        const blob = await fetchBlob(image.src)
-        zip.file(`${host.value}-section-${String(index + 1).padStart(2, "0")}.${extensionOf(blob)}`, blob)
-      }
-      catch {
-        failed++
-      }
-      zipProgress.value = index + 1
-    }
-    if (failed === images.value.length) {
-      downloadError.value = "Couldn't download the images — please try again."
-      return
-    }
-    const archive = await zip.generateAsync({ type: "blob" })
-    saveBlob(archive, `${host.value}-screenshots.zip`)
-    if (failed > 0)
-      downloadError.value = `${failed} of ${images.value.length} images couldn't be included.`
-  }
-  catch {
-    downloadError.value = "Couldn't prepare the zip — please try again."
-  }
-  finally {
-    downloadingAll.value = false
-  }
-}
+watch(() => props.capture, resetDownloads)
 </script>
 
 <template>
@@ -178,10 +73,15 @@ async function downloadAll() {
               <span v-if="images.length > 1" class="ml-1 text-muted-foreground">· {{ images.length }} sections</span>
             </p>
             <div class="flex shrink-0 items-center gap-2">
+              <Button variant="outline" size="sm" as-child>
+                <RouterLink :to="`/capture/${capture.id}`" @click="emit('close')">
+                  <ArrowUpRight class="size-4" /> Full details
+                </RouterLink>
+              </Button>
               <Button
                 size="sm"
                 :disabled="downloadingAll || !images.length"
-                @click="downloadAll"
+                @click="downloadAll(images.map(i => i.src), host)"
               >
                 <LoaderCircle v-if="downloadingAll" class="size-4 animate-spin" />
                 <HardDriveDownload v-else class="size-4" />
@@ -217,18 +117,29 @@ async function downloadAll() {
               >
               <figcaption class="mt-1.5 flex items-center justify-between gap-2">
                 <span class="text-xs text-muted-foreground">{{ img.label }}</span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  class="h-7 gap-1.5 px-2.5 text-xs"
-                  :disabled="downloading.has(index) || downloadingAll"
-                  :aria-label="`Download ${img.label}`"
-                  @click="downloadOne(index)"
-                >
-                  <LoaderCircle v-if="downloading.has(index)" class="size-3.5 animate-spin" />
-                  <Download v-else class="size-3.5" />
-                  {{ downloading.has(index) ? 'Downloading…' : 'Download' }}
-                </Button>
+                <span class="flex gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-7 gap-1.5 px-2.5 text-xs"
+                    :aria-label="`Open ${img.label} in a new tab`"
+                    @click="openImage(img.src)"
+                  >
+                    <ExternalLink class="size-3.5" /> Open
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    class="h-7 gap-1.5 px-2.5 text-xs"
+                    :disabled="downloading.has(index) || downloadingAll"
+                    :aria-label="`Download ${img.label}`"
+                    @click="downloadOne(img.src, host, index)"
+                  >
+                    <LoaderCircle v-if="downloading.has(index)" class="size-3.5 animate-spin" />
+                    <Download v-else class="size-3.5" />
+                    {{ downloading.has(index) ? 'Downloading…' : 'Download' }}
+                  </Button>
+                </span>
               </figcaption>
             </figure>
           </div>

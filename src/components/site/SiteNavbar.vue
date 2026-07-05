@@ -1,49 +1,95 @@
 <script setup lang="ts">
-import { ref } from "vue"
-import { Aperture, Menu, X } from "@lucide/vue"
+import { onBeforeUnmount, onMounted, ref } from "vue"
+import { useRoute } from "vue-router"
+import { Aperture, Menu, Moon, Sun, X } from "@lucide/vue"
 import { Button } from "@/components/ui/button"
+import { useTheme } from "@/composables/useTheme"
+
+const route = useRoute()
+const { isDark, toggle } = useTheme()
 
 const mobileOpen = ref(false)
+const scrolled = ref(false)
+
+function onScroll() {
+  scrolled.value = window.scrollY > 8
+}
+
+onMounted(() => {
+  onScroll()
+  window.addEventListener("scroll", onScroll, { passive: true })
+})
+onBeforeUnmount(() => window.removeEventListener("scroll", onScroll))
 
 const links = [
   { label: "How it works", to: "/#how" },
   { label: "Features", to: "/#features" },
   { label: "Gallery", to: "/gallery" },
 ]
+
+function isActive(to: string): boolean {
+  return to === "/gallery" && route.path === "/gallery"
+}
 </script>
 
 <template>
-  <header class="sticky top-0 z-50 border-b border-border/60 bg-background/80 backdrop-blur-md">
+  <header
+    class="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md transition-[box-shadow,border-color] duration-300"
+    :class="scrolled ? 'border-border shadow-md shadow-pine/5' : 'border-transparent'"
+  >
     <nav class="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-      <RouterLink to="/" class="flex items-center gap-2.5" @click="mobileOpen = false">
-        <span class="flex size-9 items-center justify-center rounded-lg bg-pine text-primary-foreground">
+      <RouterLink to="/" class="group flex items-center gap-2.5" @click="mobileOpen = false">
+        <span class="flex size-9 items-center justify-center rounded-lg bg-pine text-primary-foreground shadow-sm shadow-pine/30 transition-transform duration-300 group-hover:rotate-[30deg]">
           <Aperture class="size-5" />
         </span>
         <span class="font-heading text-2xl tracking-wide text-foreground">WebCapture</span>
       </RouterLink>
 
-      <div class="hidden items-center gap-8 md:flex">
+      <div class="hidden items-center gap-1 md:flex">
         <RouterLink
           v-for="link in links"
           :key="link.label"
           :to="link.to"
-          class="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+          class="rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors"
+          :class="isActive(link.to)
+            ? 'bg-secondary text-secondary-foreground'
+            : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground'"
         >
           {{ link.label }}
         </RouterLink>
       </div>
 
-      <div class="hidden md:block">
+      <div class="hidden items-center gap-2 md:flex">
+        <Button
+          variant="ghost"
+          size="icon"
+          :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggle"
+        >
+          <Sun v-if="isDark" class="size-4.5" />
+          <Moon v-else class="size-4.5" />
+        </Button>
         <Button as-child>
           <RouterLink to="/#capture">Capture a page</RouterLink>
         </Button>
       </div>
 
-      <Button variant="ghost" size="icon" class="md:hidden" @click="mobileOpen = !mobileOpen">
-        <X v-if="mobileOpen" class="size-5" />
-        <Menu v-else class="size-5" />
-        <span class="sr-only">Toggle menu</span>
-      </Button>
+      <div class="flex items-center gap-1 md:hidden">
+        <Button
+          variant="ghost"
+          size="icon"
+          :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+          @click="toggle"
+        >
+          <Sun v-if="isDark" class="size-4.5" />
+          <Moon v-else class="size-4.5" />
+        </Button>
+        <Button variant="ghost" size="icon" @click="mobileOpen = !mobileOpen">
+          <X v-if="mobileOpen" class="size-5" />
+          <Menu v-else class="size-5" />
+          <span class="sr-only">Toggle menu</span>
+        </Button>
+      </div>
     </nav>
 
     <div v-if="mobileOpen" class="border-t border-border/60 bg-background px-4 pb-4 md:hidden">

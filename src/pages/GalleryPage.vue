@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue"
-import { Camera, CircleX, ImageOff, LayoutGrid, Search, Sparkles, Table2 } from "@lucide/vue"
+import { Camera, CircleX, Globe, ImageOff, Images, LayoutGrid, Layers, Search, Sparkles, Table2 } from "@lucide/vue"
 import CaptureCard from "@/components/site/CaptureCard.vue"
 import CaptureTable from "@/components/site/CaptureTable.vue"
 import ScreenshotLightbox from "@/components/site/ScreenshotLightbox.vue"
@@ -62,6 +62,16 @@ const counts = computed(() => ({
   failed: captures.value.filter(c => c.status === "failed").length,
 }))
 
+const stats = computed(() => {
+  const sites = new Set(captures.value.map(c => c.website?.name ?? hostOf(c.url)))
+  const sections = captures.value.reduce((sum, c) => sum + (c.screenshots?.length ?? 0), 0)
+  return [
+    { icon: Globe, value: sites.size, label: sites.size === 1 ? "website" : "websites" },
+    { icon: Layers, value: captures.value.length, label: captures.value.length === 1 ? "page captured" : "pages captured" },
+    { icon: Images, value: sections, label: sections === 1 ? "screenshot" : "screenshots" },
+  ]
+})
+
 let refreshTimer: number | undefined
 
 async function load(showSpinner = false) {
@@ -100,12 +110,24 @@ onBeforeUnmount(() => window.clearTimeout(refreshTimer))
   <!-- header -->
   <section class="border-b border-border bg-card/60">
     <div class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
-      <p class="font-heading text-sm uppercase tracking-[0.2em] text-fern">The archive</p>
-      <h1 class="mt-2 font-heading text-5xl uppercase tracking-tight sm:text-6xl">Capture gallery</h1>
-      <p class="mt-4 max-w-xl text-muted-foreground">
+      <p v-reveal class="font-heading text-sm uppercase tracking-[0.2em] text-fern">The archive</p>
+      <h1 v-reveal="60" class="mt-2 font-heading text-5xl uppercase tracking-tight sm:text-6xl">Capture gallery</h1>
+      <p v-reveal="120" class="mt-4 max-w-xl text-muted-foreground">
         Every page that went through the lens. Search by URL — if it's already here,
         you don't need to spend a capture on it.
       </p>
+
+      <div v-if="!loading && captures.length" v-reveal="160" class="mt-6 flex flex-wrap gap-x-8 gap-y-3">
+        <div v-for="stat in stats" :key="stat.label" class="flex items-center gap-2.5">
+          <span class="flex size-9 items-center justify-center rounded-lg bg-secondary text-pine dark:text-sage">
+            <component :is="stat.icon" class="size-4.5" />
+          </span>
+          <span>
+            <span class="block font-heading text-2xl leading-none tabular-nums">{{ stat.value }}</span>
+            <span class="block text-xs text-muted-foreground">{{ stat.label }}</span>
+          </span>
+        </div>
+      </div>
 
       <div class="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center">
         <div class="relative flex-1 sm:max-w-md">

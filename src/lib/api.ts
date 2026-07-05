@@ -146,6 +146,22 @@ export async function getCaptureWithScreenshots(id: string): Promise<CaptureRequ
   return all.find(c => c.id === id) ?? null
 }
 
+/**
+ * Full detail for one capture: screenshots come from the list endpoint,
+ * error_message (absent there) from the status endpoint. Returns null when
+ * the capture doesn't exist anywhere.
+ */
+export async function getCaptureDetail(id: string): Promise<CaptureRequest | null> {
+  const [fromList, fromStatus] = await Promise.all([
+    getCaptureWithScreenshots(id).catch(() => null),
+    getCaptureStatus(id).catch(() => null),
+  ])
+  if (!fromList && !fromStatus) return null
+  return { ...fromStatus, ...fromList, ...(fromStatus?.error_message !== undefined
+    ? { error_message: fromStatus.error_message }
+    : {}) } as CaptureRequest
+}
+
 /** First screenshot of a capture, or a generated wireframe placeholder. */
 export function capturePreview(capture: CaptureRequest): string {
   const shot = capture.screenshots?.[0]

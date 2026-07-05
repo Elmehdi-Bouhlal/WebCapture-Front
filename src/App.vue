@@ -1,6 +1,9 @@
 <script setup lang="ts">
 import SiteFooter from "@/components/site/SiteFooter.vue"
 import SiteNavbar from "@/components/site/SiteNavbar.vue"
+import { useTheme } from "@/composables/useTheme"
+
+useTheme().init()
 </script>
 
 <template>
