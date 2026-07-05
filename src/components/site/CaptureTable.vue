@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { computed, ref } from "vue"
 import {
+  ArrowUpRight,
   ChevronDown,
   CornerDownRight,
-  Expand,
+  Eye,
   Globe,
   LoaderCircle,
   RotateCcw,
@@ -203,15 +204,21 @@ function isInFlight(capture: CaptureRequest): boolean {
               <TableCell class="text-xs text-muted-foreground">{{ timeAgo(page.requested_at) }}</TableCell>
               <TableCell class="pr-4">
                 <div class="flex justify-end gap-1.5">
-                  <Button
-                    v-if="page.status === 'completed'"
-                    variant="outline"
-                    size="sm"
-                    class="h-7 gap-1.5 px-2.5 text-xs"
-                    @click.stop="emit('view', page)"
-                  >
-                    <Expand class="size-3.5" /> View
-                  </Button>
+                  <template v-if="page.status === 'completed'">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      class="h-7 gap-1.5 px-2.5 text-xs"
+                      @click.stop="emit('view', page)"
+                    >
+                      <Eye class="size-3.5" /> Preview
+                    </Button>
+                    <Button variant="outline" size="sm" class="h-7 gap-1.5 px-2.5 text-xs" as-child>
+                      <RouterLink :to="`/capture/${page.id}`" @click.stop>
+                        <ArrowUpRight class="size-3.5" /> Details
+                      </RouterLink>
+                    </Button>
+                  </template>
                   <Button
                     v-else-if="page.status === 'failed'"
                     variant="outline"

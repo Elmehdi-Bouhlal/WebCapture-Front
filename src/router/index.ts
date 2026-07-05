@@ -13,6 +13,11 @@ const router = createRouter({
       name: "gallery",
       component: () => import("@/pages/GalleryPage.vue"),
     },
+    {
+      path: "/capture/:id",
+      name: "capture-detail",
+      component: () => import("@/pages/CaptureDetailPage.vue"),
+    },
   ],
   scrollBehavior(to, _from, savedPosition) {
     if (savedPosition) return savedPosition

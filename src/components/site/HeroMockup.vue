@@ -25,19 +25,11 @@ import exampleCapture from "@/assets/example-capture.png"
       </div>
 
       <!-- example capture -->
-      <div class="relative">
-        <img
-          :src="exampleCapture"
-          alt="Example WebCapture screenshot of stripe.com"
-          class="aspect-[16/10] w-full object-cover object-[35%_top]"
-        >
-
-        <!-- animated scan line -->
-        <div class="scanline pointer-events-none absolute inset-x-0 top-0" aria-hidden="true">
-          <div class="h-16 bg-gradient-to-b from-transparent to-sage/25" />
-          <div class="h-0.5 bg-fern shadow-[0_0_12px_2px_rgb(97_135_100/0.8)]" />
-        </div>
-      </div>
+      <img
+        :src="exampleCapture"
+        alt="Example WebCapture screenshot of stripe.com"
+        class="aspect-[16/10] w-full object-cover object-[35%_top]"
+      >
     </div>
 
     <!-- floating chips -->
@@ -57,27 +49,6 @@ import exampleCapture from "@/assets/example-capture.png"
 </template>
 
 <style scoped>
-.scanline {
-  animation: scan 5s ease-in-out infinite;
-}
-
-@keyframes scan {
-  0%, 8% {
-    transform: translateY(0);
-    opacity: 0;
-  }
-  12% {
-    opacity: 1;
-  }
-  88% {
-    opacity: 1;
-  }
-  92%, 100% {
-    transform: translateY(300px);
-    opacity: 0;
-  }
-}
-
 .chip {
   animation: chip-pop 0.6s cubic-bezier(0.22, 1, 0.36, 1) both, chip-float 4s ease-in-out 0.6s infinite;
 }
