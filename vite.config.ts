@@ -14,11 +14,11 @@ export default defineConfig({
     server: {
         proxy: {
             '/api': {
-                target: 'https://webcapture-api.elmehdi.space/',
+                target: 'https://webcapture-api.el-mehdi.work/',
                 changeOrigin: true,
             },
             '/cdn': {
-                target: 'https://screenshots.elmehdi.space',
+                target: 'https://screenshots.el-mehdi.work',
                 changeOrigin: true,
                 rewrite: (path) => path.replace(/^\/cdn/, ''),
             },
